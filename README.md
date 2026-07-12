@@ -1,0 +1,1 @@
+# odoo-qc-fail-alert-telegram-n8n
