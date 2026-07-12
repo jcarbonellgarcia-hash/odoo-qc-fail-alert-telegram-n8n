@@ -1,0 +1,298 @@
+{
+  "name": "Odoo QC Fail Alert - Telegram (n8n)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -2128,
+        -512
+      ],
+      "id": "4a3fd53b-a5c3-4790-8350-4229ad186452",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ferreteriapuerto.odoo.com/jsonrpc",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"jsonrpc\": \"2.0\",\n  \"method\": \"call\",\n  \"params\": {\n    \"service\": \"object\",\n    \"method\": \"execute_kw\",\n    \"args\": [\n      \"ferreteriapuerto\",\n      2,\n      \"API KEY HERE\",\n      \"quality.check\",\n      \"search_read\",\n      [[[\"quality_state\", \"=\", \"fail\"]]],\n      {\"fields\": [\"id\", \"name\", \"title\", \"product_id\", \"production_id\", \"workcenter_id\", \"user_id\", \"quality_state\"], \"limit\": 20}\n    ]\n  },\n  \"id\": 1\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -1920,
+        -320
+      ],
+      "id": "8d2516c4-8210-4b37-8d9a-6cd32b7c63ad",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "result",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -1728,
+        -320
+      ],
+      "id": "de38e276-4724-46ff-b38f-501cbb1edbe5",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "7v1RgDd8OTVwsDGG",
+          "mode": "list",
+          "cachedResultName": "quality_check_alert_state.",
+          "cachedResultUrl": "/projects/kVdcN5GvoBRc1e9o/datatables/7v1RgDd8OTVwsDGG"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "qualityCheckId",
+              "keyValue": "={{ Number($json.id) }} "
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -1520,
+        -224
+      ],
+      "id": "f835ab07-a5dd-46f0-9b2d-7e3c038a1350",
+      "name": "Get row(s)",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "313d5fdc-ec69-4374-81ad-552178bb4773",
+              "leftValue": "={{ $json.alerted }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1360,
+        -224
+      ],
+      "id": "4dcd7c9b-ebe3-4a74-80f1-8210e9eede44",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "chatId": "406855",
+        "text": "=⚠️ Quality Check FAILED\nProducto: {{ $('Split Out').first().json.product_id[1] }}\nOrden: {{ $('Split Out').first().json.production_id[1] }}\nCentro de trabajo: {{ $('Split Out').first().json.workcenter_id[1] }}\nVerificado por: {{ $('Split Out').first().json.user_id[1] }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1088,
+        -464
+      ],
+      "id": "a5dc70c2-ad41-4848-9a57-3ea570191795",
+      "name": "Send a text message",
+      "webhookId": "78ca7bef-5a5b-464c-ac46-a777fbae40d3",
+      "credentials": {
+        "telegramApi": {
+          "id": "gYtsj12xxO7I8zl9",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "value": "7v1RgDd8OTVwsDGG",
+          "mode": "list",
+          "cachedResultName": "quality_check_alert_state.",
+          "cachedResultUrl": "/projects/kVdcN5GvoBRc1e9o/datatables/7v1RgDd8OTVwsDGG"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "qualityCheckId",
+              "keyValue": "={{ $('Split Out').first().json.id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "alerted": true,
+            "qualityCheckId": "={{ $('Split Out').first().json.id }}",
+            "lastAlertDate": "={{ $now }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "qualityCheckId",
+              "displayName": "qualityCheckId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "alerted",
+              "displayName": "alerted",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "lastAlertDate",
+              "displayName": "lastAlertDate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "dryRun": false
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -736,
+        -256
+      ],
+      "id": "2dfd4fde-7acd-49e4-8b67-f98039906705",
+      "name": "Upsert row(s)"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Get row(s)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s)": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message": {
+      "main": [
+        [
+          {
+            "node": "Upsert row(s)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "1a4f74eb-8d5a-4ee9-9e77-4c81af85942c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2202347d5d2d1b4d214b5582f3b623fb8f882730ef7d5c6b82922053436c662f"
+  },
+  "nodeGroups": [],
+  "id": "uyFH0vAZFxWy26kb",
+  "tags": []
+}
